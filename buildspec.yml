@@ -1,0 +1,56 @@
+version: 0.2
+
+env:
+  variables:
+    APP_NAME: "angular-s3-cft"
+    JFROG_USERNAME: username
+    JFROG_API_KEY: tokenvalue
+
+phases:
+  install:
+    runtime-versions:
+      nodejs: 20
+    commands:
+      - echo "Install phase started..."
+      # - curl -k -fL https://install-cli.jfrog.io | sh
+      # - jf c add --url https://jfrog.example.com/ --access-token $JFROG_API_KEY --insecure-tls=true --interactive=false
+      # - jf npmc --repo-resolve il-npm-virtual --repo-deploy il-npm-virtual
+      # - ls
+      # - jf npm install --force
+      # - jf npm install -g @angular/cli@16.2 gulp-cli
+
+  build:
+    commands:
+      - echo "Build phase started..."
+      - gulp --version
+      - pwd
+      - npm run build
+      - if [ $? -eq 0 ]; then echo "Build successful"; else exit 1; fi
+
+  post_build:
+    commands:
+      - echo "Post-build phase started..."
+      - cd dist/$APP_NAME
+      - echo "Compressing files using gzip..."
+      - find . -type f -name "*.html" -exec gzip -k {} \;
+      - find . -type f -name "*.js" -exec gzip -k {} \;
+      - find . -type f -name "*.css" -exec gzip -k {} \;
+      - find . -type f -name "*.svg" -exec gzip -k {} \;
+      - find . -type f -name "*.json" -exec gzip -k {} \;
+
+      # Sync original files to S3
+      - echo "Uploading original files to S3..."
+      - aws s3 sync . s3://il-s3--buck--du/Test/ --exclude "*.gz" --exclude "s3://il-s3--buck--du/Test/Brochures/*"
+
+      # Sync gzip-compressed files to S3 with Content-Encoding header
+      # - echo "Uploading compressed files to S3 with Content-Encoding: gzip..."
+      - find . -type f -name "*.gz" -exec bash -c 'aws s3 cp "$0" s3://il-s3--buck--du/Test/$(basename "${0%.gz}") --content-encoding gzip --metadata-directive REPLACE --acl public-read --cache-control max-age=31536000' {} \;
+
+      # # Assume role and create CloudFront cache invalidation
+      # - echo "Assuming role to invalidate CloudFront cache..."
+      # - TEMP_ROLE=$(aws sts assume-role --role-arn arn:aws:iam::accountid:role/IAM_CloudfrontRole_T3 --role-session-name test)
+      # - export TEMP_ROLE
+      # - export AWS_ACCESS_KEY_ID=$(echo "${TEMP_ROLE}" | jq -r '.Credentials.AccessKeyId')
+      # - export AWS_SECRET_ACCESS_KEY=$(echo "${TEMP_ROLE}" | jq -r '.Credentials.SecretAccessKey')
+      # - export AWS_SESSION_TOKEN=$(echo "${TEMP_ROLE}" | jq -r '.Credentials.SessionToken')
+      # - aws cloudfront create-invalidation --distribution-id distID --paths "/*"
