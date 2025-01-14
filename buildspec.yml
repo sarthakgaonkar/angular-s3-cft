@@ -3,8 +3,6 @@ version: 0.2
 env:
   variables:
     APP_NAME: "angular-s3-cft"
-    JFROG_USERNAME: username
-    JFROG_API_KEY: tokenvalue
 
 phases:
   install:
@@ -12,12 +10,10 @@ phases:
       nodejs: 20
     commands:
       - echo "Install phase started..."
-      # - curl -k -fL https://install-cli.jfrog.io | sh
-      # - jf c add --url https://jfrog.example.com/ --access-token $JFROG_API_KEY --insecure-tls=true --interactive=false
-      # - jf npmc --repo-resolve il-npm-virtual --repo-deploy il-npm-virtual
-      # - ls
-      # - jf npm install --force
-      # - jf npm install -g @angular/cli@16.2 gulp-cli
+      - echo "Installing Angular CLI..."
+      - npm install -g @angular/cli
+      - echo "Installing project dependencies..."
+      - npm install
 
   build:
     commands:
@@ -40,11 +36,16 @@ phases:
 
       # Sync original files to S3
       - echo "Uploading original files to S3..."
-      - aws s3 sync . s3://il-s3--buck--du/Test/ --exclude "*.gz" --exclude "s3://il-s3--buck--du/Test/Brochures/*"
+      - aws s3 sync . s3://ssg-react-app-0907/Code/ --exclude "*.gz" 
 
       # Sync gzip-compressed files to S3 with Content-Encoding header
-      # - echo "Uploading compressed files to S3 with Content-Encoding: gzip..."
-      - find . -type f -name "*.gz" -exec bash -c 'aws s3 cp "$0" s3://il-s3--buck--du/Test/$(basename "${0%.gz}") --content-encoding gzip --metadata-directive REPLACE --acl public-read --cache-control max-age=31536000' {} \;
+      - echo "Uploading compressed files to S3 with Content-Encoding: gzip..."
+      - find . -type f -name "*.gz" -exec bash -c 'aws s3 cp "$0" s3://ssg-react-app-0907/Code/$(basename "${0%.gz}") --content-encoding gzip --metadata-directive REPLACE --acl public-read --cache-control max-age=31536000' {} \;
+
+artifacts:
+  files:
+    - '**/*'
+
 
       # # Assume role and create CloudFront cache invalidation
       # - echo "Assuming role to invalidate CloudFront cache..."
