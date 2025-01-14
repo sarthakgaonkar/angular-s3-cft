@@ -3,6 +3,7 @@ version: 0.2
 env:
   variables:
     APP_NAME: "angular-s3-cft"
+    DISTRIBUTION_ID: "EWJZ1O768S7ZR" # Replace with your CloudFront Distribution ID
 
 phases:
   install:
@@ -18,7 +19,6 @@ phases:
   build:
     commands:
       - echo "Build phase started..."
-      # - gulp --version
       - pwd
       - npm run build
       - if [ $? -eq 0 ]; then echo "Build successful"; else exit 1; fi
@@ -36,15 +36,20 @@ phases:
 
       # Sync original files to S3
       - echo "Uploading original files to S3..."
-      - aws s3 sync . s3://ssg-react-app-0907/ --exclude "*.gz" 
+      - aws s3 sync . s3://ssg-react-app-0907/ --exclude "*.gz"
 
       # Sync gzip-compressed files to S3 with Content-Encoding header
       # - echo "Uploading compressed files to S3 with Content-Encoding: gzip..."
       - find . -type f -name "*.gz" -exec bash -c 'aws s3 cp "$0" s3://ssg-react-app-0907/$(basename "${0%.gz}") --content-encoding gzip --metadata-directive REPLACE --cache-control max-age=31536000' {} \;
 
+      # Invalidate CloudFront cache
+      - echo "Invalidating CloudFront cache..."
+      - aws cloudfront create-invalidation --distribution-id $DISTRIBUTION_ID --paths "/*"
+
 artifacts:
   files:
     - '**/*'
+
 
 
       # # Assume role and create CloudFront cache invalidation
