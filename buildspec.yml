@@ -42,7 +42,7 @@ phases:
       # - echo "Uploading compressed files to S3 with Content-Encoding: gzip..."
       - find . -type f -name "*.gz" -exec bash -c 'aws s3 cp "$0" s3://ssg-react-app-0907/$(basename "${0%.gz}") --content-encoding gzip --metadata-directive REPLACE --cache-control max-age=31536000' {} \;
 
-      # Invalidate CloudFront cache
+      # Invalidate CloudFront cache invalidation commands
       - echo "Invalidating CloudFront cache..."
       - aws cloudfront create-invalidation --distribution-id $DISTRIBUTION_ID --paths "/*"
 
